@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>チャットゲーム</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="chatBox">
+        <!-- チャットメッセージがここに表示されます -->
+    </div>
+    <div id="controls">
+        <textarea id="userInput" rows="4" placeholder="質問を入力..."></textarea>
+
+        <label for="answerCheckbox">解答確認:</label>
+        <input type="checkbox" id="answerCheckbox">
+        <button onclick="sendQuestion()">送信</button>
+    </div>
+	<div id="passwordform">
+    	<!-- パスワード入力フォーム -->
+    	<label for="password">パスワード:</label>
+    	<input type="password" id="password" placeholder="パスワードを入力...">
+	</div>
+    <script src="chats.js"> </script>
+
+</body>
+
+</html>
