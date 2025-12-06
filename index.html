@@ -1,31 +1,197 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>チャットゲーム</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<title>適性検査タイムキーパー</title>
+<style>
+  body {
+    margin: 0;
+    padding: 20px;
+    background: #111;
+    text-align: center;
+    color: white;
+    font-family: Arial, sans-serif;
+  }
+
+  /* ======== 7セグ風表示 ======== */
+  #display {
+    font-family: "Courier New", monospace;
+    font-size: 18vw;
+    letter-spacing: 0.05em;
+    background: black;
+    border-radius: 20px;
+    padding: 20px;
+    margin: 10px auto;
+    width: 95%;
+    transition: background 0.2s linear;
+  }
+
+  .whiteText {
+    color: white;
+    text-shadow: 0 0 10px #ccc, 0 0 20px #aaa;
+  }
+  .yellowText {
+    color: #ffe066;
+    text-shadow: 0 0 10px #ffeb99, 0 0 20px #ffcc33;
+  }
+  .redText {
+    color: #ff4444;
+    text-shadow: 0 0 10px #ff0000, 0 0 20px #cc0000;
+  }
+
+  /* 点滅（背景のみ） */
+  @keyframes flashBg {
+    0% { background: black; }
+    50% { background: #ffffff44; }
+    100% { background: black; }
+  }
+
+  /* ======== ボタン ======== */
+  #buttons button {
+    font-size: 2vw;
+    padding: 12px 20px;
+    margin: 8px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+  }
+
+  #pauseBtn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+</style>
 </head>
-
 <body>
-    <div id="chatBox">
-        <!-- チャットメッセージがここに表示されます -->
-    </div>
-    <div id="controls">
-        <textarea id="userInput" rows="4" placeholder="質問を入力..."></textarea>
 
-        <label for="answerCheckbox">解答確認:</label>
-        <input type="checkbox" id="answerCheckbox">
-        <button onclick="sendQuestion()">送信</button>
-    </div>
-	<div id="passwordform">
-    	<!-- パスワード入力フォーム -->
-    	<label for="password">パスワード:</label>
-    	<input type="password" id="password" placeholder="パスワードを入力...">
-	</div>
-    <script src="chats.js"> </script>
+<h1>適性検査タイムキーパー</h1>
+<div id="display" class="whiteText">00:00</div>
 
+<div id="buttons">
+  <button onclick="startTimer(30)">30秒</button>
+  <button onclick="startTimer(120)">2分</button>
+  <button onclick="startSequence(420,60)">7分⇒1分</button>
+  <button onclick="startTimer(60)">1分</button>
+  <button onclick="resetTimer()">リセット</button>
+  <button id="pauseBtn" onclick="togglePause()" disabled>⏸</button>
+</div>
+
+<script>
+let timer = null;
+let startTime = 0;
+let targetSeconds = 0;
+let paused = false;
+let pausedElapsed = 0;
+let finished = false;
+let phase = 1; // 1:通常、2:フェーズ2、3:超過
+let sequenceMode = false;
+let nextPhaseSeconds = 0;
+
+function format(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function setColorPhase(p) {
+  const d = document.getElementById('display');
+  d.classList.remove('whiteText','yellowText','redText');
+  if (p === 1) d.classList.add('whiteText');
+  if (p === 2) d.classList.add('yellowText');
+  if (p === 3) d.classList.add('redText');
+}
+
+function resetTimer() {
+  clearInterval(timer);
+  paused = false;
+  finished = false;
+  sequenceMode = false;
+  phase = 1;
+
+  document.getElementById('pauseBtn').disabled = true;
+  document.getElementById('pauseBtn').textContent = '⏸';
+
+  const d = document.getElementById('display');
+  d.textContent = '00:00';
+  setColorPhase(1);
+}
+
+function startTimer(sec) {
+  sequenceMode = false;
+  runTimer(sec, 1);
+}
+
+function startSequence(secA, secB) {
+  sequenceMode = true;
+  nextPhaseSeconds = secB;
+  runTimer(secA, 1);
+}
+
+function runTimer(sec, phaseSet) {
+  clearInterval(timer);
+  paused = false;
+  finished = false;
+  targetSeconds = sec;
+  phase = phaseSet;
+  setColorPhase(phase);
+
+  const d = document.getElementById('display');
+  d.textContent = format(sec);
+
+  const pb = document.getElementById('pauseBtn');
+  pb.disabled = false;
+  pb.textContent = '⏸';
+
+  startTime = Date.now();
+  timer = setInterval(tick, 200);
+}
+
+function tick() {
+  if (paused) return;
+  const now = Date.now();
+  const elapsed = Math.floor((now - startTime) / 1000);
+  const d = document.getElementById('display');
+
+  if (!finished) {
+    if (elapsed <= targetSeconds) {
+      d.textContent = format(targetSeconds - elapsed);
+      if (elapsed === targetSeconds) {
+        finished = true;
+        flash();
+        if (sequenceMode && phase === 1) {
+          runTimer(nextPhaseSeconds, 2);
+        }
+      }
+    }
+  } else {
+    const over = elapsed - targetSeconds;
+    phase = 3;
+    setColorPhase(3);
+    d.textContent = '+' + format(over);
+  }
+}
+
+function flash() {
+  const d = document.getElementById('display');
+  d.style.animation = 'flashBg 0.5s';
+  setTimeout(() => d.style.animation = '', 500);
+}
+
+function togglePause() {
+  const pb = document.getElementById('pauseBtn');
+
+  if (!paused) {
+    paused = true;
+    clearInterval(timer);
+    pausedElapsed = Math.floor((Date.now() - startTime) / 1000);
+    pb.textContent = '▶';
+  } else {
+    paused = false;
+    startTime = Date.now() - pausedElapsed * 1000;
+    timer = setInterval(tick, 200);
+    pb.textContent = '⏸';
+  }
+}
+</script>
 </body>
-
 </html>
